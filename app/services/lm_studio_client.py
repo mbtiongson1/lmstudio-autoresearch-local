@@ -12,9 +12,20 @@ class LMStudioClient:
         # Native V1 API base
         self.v1_base_url = os.getenv("LM_STUDIO_V1_URL", "http://localhost:1234/api/v1")
         
-        self.model = model or os.getenv("MODEL_NAME", "ibm/granite-4-micro")
         self.api_key = api_key or os.getenv("LM_API_TOKEN", "lm-studio")
         self.client = OpenAI(base_url=self.openai_base_url, api_key=self.api_key)
+        
+        # Auto-detect loaded model
+        self.model = model or os.getenv("MODEL_NAME")
+        if not self.model:
+            try:
+                models_data = self.list_models()
+                for m in models_data.get("models", []):
+                    if m.get("loaded_instances"):
+                        self.model = m["key"]
+                        break
+            except Exception:
+                self.model = "ibm/granite-4-micro"
 
     def set_model(self, model: str):
         self.model = model
