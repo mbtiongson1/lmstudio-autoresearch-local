@@ -18,7 +18,7 @@ DEFAULT_INTEGRATIONS = [
         "type": "ephemeral_mcp",
         "server_label": "huggingface",
         "server_url": "https://huggingface.co/mcp",
-        "allowed_tools": ["model_search"]
+        "allowed_tools": []
     }
 ]
 
