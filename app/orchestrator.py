@@ -57,14 +57,12 @@ class ResearchOrchestrator:
             for event_type, data in stream:
                 # Emit specific events for UI
                 if self.callback:
+                    # IMPORTANT: We forward ALL streaming events to the UI
                     self.callback(task_id, {"type": event_type, "data": data})
                 
                 # Aggregate content
                 if event_type == "message.delta":
                     full_content += data.get("content", "")
-                elif event_type == "reasoning.delta":
-                    # You might also want to track reasoning if needed
-                    pass
                 elif event_type == "chat.end":
                     # The chat.end event contains the aggregated response
                     full_content = ""
@@ -72,7 +70,8 @@ class ResearchOrchestrator:
                         if item.get("type") in ["message", "reasoning"]:
                             full_content += item.get("content", "")
             return full_content.strip()
-        except Exception:
+        except Exception as e:
+            print(f"DEBUG: Streaming failed: {e}")
             # Fallback for older models
             return self.lm_client.call_model(SYSTEM_PROMPT, state_block, max_tokens=80, temperature=0.3)
 
