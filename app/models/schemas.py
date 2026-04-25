@@ -5,6 +5,7 @@ from typing import Optional, List, Union, Dict, Any
 class ResearchRequest(BaseModel):
     topic: str
     max_turns: int = 8
+    integrations: Optional[List[Dict[str, Any]]] = None
 
 
 class ResearchStatus(BaseModel):
