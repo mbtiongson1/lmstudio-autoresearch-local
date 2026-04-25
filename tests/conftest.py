@@ -10,6 +10,7 @@ def mock_lm_client():
     """Mock LM Studio client."""
     client = Mock(spec=LMStudioClient)
     client.call_model = Mock(return_value="SEARCH: climate change facts")
+    client.chat_v1 = Mock(return_value="SEARCH: climate change facts")
     return client
 
 
