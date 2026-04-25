@@ -23,6 +23,11 @@ dev = [
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["static*", "tests*"]
+
 [tool.uv]
 dev-dependencies = [
     "pytest>=7.4.3",
