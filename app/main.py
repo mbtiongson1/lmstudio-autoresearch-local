@@ -81,12 +81,10 @@ async def start_research(request: ResearchRequest):
     # Run research in background
     async def run_research():
         try:
-            # Use the integrations from the request
             orchestrator = ResearchOrchestrator(
                 lm_client, 
                 state_manager, 
-                callback=on_research_event, 
-                integrations=request.integrations
+                callback=on_research_event
             )
             result = orchestrator.research(task_id, request.topic, request.max_turns)
             return result
