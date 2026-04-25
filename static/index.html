@@ -30,21 +30,15 @@
         
         <!-- BEGIN: Sidebar -->
         <aside class="flex flex-col items-center py-8 glass-card rounded-2xl w-20 shrink-0 gap-6" data-purpose="navigation-sidebar">
-            <!-- Active Home Icon -->
-            <div class="p-3 rounded-xl bg-brand-cyan/20 text-brand-cyan active-glow cursor-pointer transition-all hover:scale-105" data-purpose="sidebar-item-active">
+            <!-- Icons -->
+            <div id="nav-home" class="p-3 rounded-xl bg-brand-cyan/20 text-brand-cyan active-glow cursor-pointer transition-all hover:scale-105" data-purpose="sidebar-item-active">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
                 </svg>
             </div>
-            <!-- Other Icons (Placeholders) -->
-            <div class="p-3 text-slate-400 hover:text-brand-cyan cursor-pointer transition-colors">
+            <div id="nav-history" class="p-3 text-slate-400 hover:text-brand-cyan cursor-pointer transition-colors">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                </svg>
-            </div>
-            <div class="p-3 text-slate-400 hover:text-brand-cyan cursor-pointer transition-colors">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
                 </svg>
             </div>
             
@@ -59,8 +53,17 @@
         <!-- BEGIN: DashboardContent -->
         <main class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
             
-            <!-- BEGIN: ModelManagement -->
-            <section class="glass-card rounded-2xl flex flex-col overflow-hidden" data-purpose="model-management-column">
+            <!-- BEGIN: HistorySection -->
+            <section id="history-section" class="glass-card rounded-2xl flex flex-col overflow-hidden hidden" data-purpose="history-column">
+                <header class="p-6 flex items-center justify-between border-b border-brand-border">
+                    <h2 class="text-xl font-semibold tracking-wide">Research History</h2>
+                    <input id="history-search" class="bg-slate-800/80 border border-brand-border rounded-lg px-3 py-1 text-xs text-white" type="text" placeholder="Search history..."/>
+                </header>
+                <div class="p-6 overflow-y-auto space-y-4" id="history-list"></div>
+            </section>
+
+            <!-- BEGIN: ModelManagement (wrapped to toggle) -->
+            <section id="model-section" class="glass-card rounded-2xl flex flex-col overflow-hidden" data-purpose="model-management-column">
                 <header class="p-6 flex items-center justify-between border-b border-brand-border">
                     <div class="flex items-center gap-3">
                         <div class="text-brand-cyan">

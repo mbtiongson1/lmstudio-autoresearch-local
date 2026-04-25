@@ -2,6 +2,7 @@
 import uuid
 from typing import Dict, Any, List
 from datetime import datetime
+from app.services import db_manager
 
 
 class StateManager:
@@ -11,7 +12,7 @@ class StateManager:
     def create_session(self, topic: str, max_turns: int = 8) -> str:
         """Create a new research session and return its ID."""
         task_id = str(uuid.uuid4())
-        self.sessions[task_id] = {
+        session = {
             "task_id": task_id,
             "topic": topic,
             "max_turns": max_turns,
@@ -24,6 +25,8 @@ class StateManager:
             "completed_at": None,
             "final_answer": None
         }
+        self.sessions[task_id] = session
+        db_manager.save_session(session)
         return task_id
 
     def get_session(self, task_id: str) -> Dict[str, Any]:
@@ -34,16 +37,19 @@ class StateManager:
         """Update session state."""
         if task_id in self.sessions:
             self.sessions[task_id].update(kwargs)
+            db_manager.save_session(self.sessions[task_id])
 
     def add_history_entry(self, task_id: str, turn: int, action: str, content: str):
         """Add a history entry to the session."""
         if task_id in self.sessions:
-            self.sessions[task_id]["history"].append({
+            entry = {
                 "turn": turn,
                 "action": action,
                 "content": content,
                 "timestamp": datetime.now().isoformat()
-            })
+            }
+            self.sessions[task_id]["history"].append(entry)
+            db_manager.save_history_entry(task_id, entry)
 
     def update_summary(self, task_id: str, summary: str):
         """Update the rolling summary."""
@@ -60,6 +66,7 @@ class StateManager:
         if task_id in self.sessions:
             self.sessions[task_id]["status"] = "running"
             self.sessions[task_id]["started_at"] = datetime.now().isoformat()
+            db_manager.save_session(self.sessions[task_id])
 
     def mark_completed(self, task_id: str, final_answer: str):
         """Mark session as completed."""
@@ -67,9 +74,11 @@ class StateManager:
             self.sessions[task_id]["status"] = "completed"
             self.sessions[task_id]["final_answer"] = final_answer
             self.sessions[task_id]["completed_at"] = datetime.now().isoformat()
+            db_manager.save_session(self.sessions[task_id])
 
     def mark_error(self, task_id: str, error: str):
         """Mark session as errored."""
         if task_id in self.sessions:
             self.sessions[task_id]["status"] = "error"
             self.sessions[task_id]["error"] = error
+            db_manager.save_session(self.sessions[task_id])

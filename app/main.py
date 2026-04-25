@@ -13,6 +13,7 @@ from app.models.schemas import (
 )
 from app.services.lm_studio_client import LMStudioClient
 from app.services.state_manager import StateManager
+from app.services import db_manager
 from app.orchestrator import ResearchOrchestrator
 
 # Load environment variables from .env file
@@ -112,13 +113,41 @@ async def get_status(task_id: str):
     )
 
 
-@app.get("/api/models", response_model=ModelsListResponse)
-async def get_models():
-    """List available models from LM Studio."""
-    try:
-        return lm_client.list_models()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/history")
+async def get_history(query: str = None):
+    """List research history."""
+    sessions = db_manager.get_all_sessions(query)
+    return [
+        {
+            "task_id": row[0],
+            "topic": row[1],
+            "status": row[2],
+            "created_at": row[3]
+        } for row in sessions
+    ]
+
+
+@app.get("/api/history/{task_id}")
+async def get_session_details(task_id: str):
+    """Get full details of a past session."""
+    session, history = db_manager.get_session_details(task_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    return {
+        "task_id": session[0],
+        "topic": session[1],
+        "status": session[2],
+        "history": [{"turn": h[0], "action": h[1], "content": h[2], "timestamp": h[3]} for h in history],
+        "final_answer": session[6]
+    }
+
+
+@app.delete("/api/history/{task_id}")
+async def delete_session(task_id: str):
+    """Delete a session."""
+    db_manager.delete_session(task_id)
+    return {"message": "Session deleted"}
 
 
 @app.post("/api/models/load")

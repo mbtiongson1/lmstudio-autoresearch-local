@@ -14,6 +14,88 @@ class AutoResearchAgent {
         document.getElementById('start-btn').addEventListener('click', () => this.startResearch());
         document.getElementById('reset-btn').addEventListener('click', () => this.reset());
         document.getElementById('refresh-models-btn').addEventListener('click', () => this.refreshModels());
+        
+        // History navigation
+        document.getElementById('nav-history').addEventListener('click', () => this.toggleHistory());
+        document.getElementById('history-search').addEventListener('input', (e) => this.loadHistory(e.target.value));
+        document.getElementById('nav-home').addEventListener('click', () => this.toggleHome());
+    }
+
+    toggleHistory() {
+        document.getElementById('history-section').classList.remove('hidden');
+        document.getElementById('model-section').classList.add('hidden');
+        this.loadHistory();
+    }
+    
+    toggleHome() {
+        document.getElementById('history-section').classList.add('hidden');
+        document.getElementById('model-section').classList.remove('hidden');
+    }
+
+    async loadHistory(query = '') {
+        const historyList = document.getElementById('history-list');
+        historyList.innerHTML = '<div class="text-sm">Loading history...</div>';
+        
+        try {
+            const url = query ? `/api/history?query=${encodeURIComponent(query)}` : '/api/history';
+            const response = await fetch(url);
+            const sessions = await response.json();
+            
+            if (sessions.length === 0) {
+                historyList.innerHTML = '<div class="text-sm text-slate-500">No sessions found.</div>';
+                return;
+            }
+            
+            historyList.innerHTML = '';
+            sessions.forEach(s => {
+                const el = document.createElement('div');
+                el.className = 'glass-card p-4 rounded-lg cursor-pointer hover:bg-slate-800 transition-all';
+                el.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="text-sm font-medium text-slate-200">${s.topic}</div>
+                        <button class="delete-btn text-xs text-red-400 hover:text-red-300">Delete</button>
+                    </div>
+                    <div class="text-[10px] text-slate-500 mt-1">${new Date(s.created_at).toLocaleString()}</div>
+                `;
+                el.addEventListener('click', () => this.viewSession(s.task_id));
+                el.querySelector('.delete-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteSession(s.task_id);
+                });
+                historyList.appendChild(el);
+            });
+        } catch (e) {
+            historyList.innerHTML = '<div class="text-sm text-red-400">Error loading history.</div>';
+        }
+    }
+
+    async viewSession(taskId) {
+        try {
+            const response = await fetch(`/api/history/${taskId}`);
+            const data = await response.json();
+            
+            // Switch to home view
+            this.toggleHome();
+            this.clearOutput();
+            document.getElementById('topic-input').value = data.topic;
+            document.getElementById('status-section').style.display = 'none';
+            document.getElementById('answer-section').style.display = 'block';
+            document.getElementById('final-answer').innerHTML = data.final_answer + 
+                `<br><br><button class="copy-btn bg-slate-700 px-3 py-1 rounded text-xs text-white">Copy Answer</button>`;
+            
+            document.querySelector('.copy-btn').addEventListener('click', () => {
+                navigator.clipboard.writeText(data.final_answer);
+                alert('Answer copied to clipboard!');
+            });
+        } catch (e) {
+            console.error('Error loading session details', e);
+        }
+    }
+
+    async deleteSession(taskId) {
+        if (!confirm('Are you sure you want to delete this session?')) return;
+        await fetch(`/api/history/${taskId}`, { method: 'DELETE' });
+        this.loadHistory();
     }
 
     async refreshModels() {
