@@ -7,40 +7,43 @@ import re
 class SearchService:
     @staticmethod
     def search(query: str, max_chars: int = 1500) -> str:
-        """Fetch content from a URL or search directly."""
-        # Simple heuristic to check if it's a URL or search query
+        """Fetch content from a URL or search directly using DDG HTML version."""
+        # Use DDG's HTML-only version for easier scraping
         is_url = query.startswith("http")
-        url = query if is_url else f"https://duckduckgo.com/?q={query.replace(' ', '+')}"
+        url = query if is_url else f"https://html.duckduckgo.com/html/?q={query.replace(' ', '+')}"
         
         try:
-            # We need a browser-like user agent
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             
             with httpx.Client(follow_redirects=True, timeout=10) as client:
-                response = client.get(url, headers=headers)
+                response = client.post(url, data={'q': query.replace(' ', '+')}) if not is_url else client.get(url, headers=headers)
                 response.raise_for_status()
                 
-                # If we searched, we might want to get the first result link
-                if not is_url:
-                    # Very simple extraction of first result from DDG
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    results = soup.select('a[href^="http"]')
-                    # Find a real link (not a DDG internal one)
-                    for link in results:
-                        href = link['href']
-                        if "duckduckgo.com" not in href and "://" in href:
-                            return SearchService.search(href, max_chars)
-                    return "No results found."
-                
-                # If it's a URL, extract text
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
-                # Remove script/style tags
+                # If it's a search, extract first result link
+                if not is_url:
+                    # DDG HTML results have class 'result__url'
+                    results = soup.select('a.result__url')
+                    if results:
+                        link = results[0]['href']
+                        # Handle relative URLs or redirects
+                        if link.startswith('/'):
+                            link = 'https://duckduckgo.com' + link
+                        # For DDG result redirects (e.g. /l/?uddg=...)
+                        if 'uddg=' in link:
+                            link = re.search(r'uddg=(.*?)&', link).group(1)
+                            import urllib.parse
+                            link = urllib.parse.unquote(link)
+                        
+                        return SearchService.search(link, max_chars)
+                    return "No search results found."
+                
+                # If it's a URL, extract text
                 for script in soup(["script", "style", "nav", "footer", "header"]):
                     script.decompose()
                 
                 text = soup.get_text(separator=' ')
-                # Clean up whitespace
                 text = re.sub(r'\s+', ' ', text).strip()
                 
                 return text[:max_chars] if text else "Could not extract text."
