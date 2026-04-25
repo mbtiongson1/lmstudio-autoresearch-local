@@ -176,6 +176,15 @@ async def unload_model(request: ModelUnloadRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/models")
+async def list_models():
+    """List available models."""
+    try:
+        return lm_client.list_models()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.websocket("/ws/research/{task_id}")
 async def websocket_research(websocket: WebSocket, task_id: str):
     """WebSocket endpoint for real-time research updates."""
