@@ -85,3 +85,41 @@ class LMStudioClient:
                 stop=["\n"]
             )
             return response.choices[0].message.content.strip()
+
+    def list_models(self) -> dict:
+        """List available models via LM Studio V1 API."""
+        base = self.v1_base_url.rstrip("/")
+        url = f"{base}/models"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        return response.json()
+
+    def load_model(self, model_key: str, **kwargs) -> dict:
+        """Load a model via LM Studio V1 API."""
+        base = self.v1_base_url.rstrip("/")
+        url = f"{base}/models/load"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {"model": model_key}
+        payload.update(kwargs)
+        response = requests.post(url, headers=headers, json=payload, timeout=300)  # Loading can take time
+        response.raise_for_status()
+        return response.json()
+
+    def unload_model(self, instance_id: str) -> dict:
+        """Unload a model via LM Studio V1 API."""
+        base = self.v1_base_url.rstrip("/")
+        url = f"{base}/models/unload"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {"instance_id": instance_id}
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        return response.json()
