@@ -285,13 +285,33 @@ class AutoResearchAgent {
 
     updateStatus(status) {
         const badge = document.getElementById('status-badge');
-        badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        badge.classList.remove('completed', 'error');
+        const toggle = document.getElementById('status-toggle');
+        const dot = document.getElementById('status-toggle-dot');
+        
+        badge.textContent = status.toUpperCase();
+        
+        // Reset classes
+        badge.classList.remove('text-slate-500', 'text-brand-cyan', 'text-red-400', 'text-green-400');
+        toggle.classList.remove('bg-slate-700', 'bg-brand-cyan/20');
+        dot.classList.remove('left-1', 'right-1', 'bg-slate-500', 'bg-brand-cyan', 'active-glow');
 
-        if (status === 'completed') {
-            badge.classList.add('completed');
-        } else if (status === 'error') {
-            badge.classList.add('error');
+        if (status === 'completed' || status === 'finished') {
+            badge.classList.add('text-green-400');
+            toggle.classList.add('bg-slate-700');
+            dot.classList.add('left-1', 'bg-slate-500');
+        } else if (status === 'error' || status === 'failed') {
+            badge.classList.add('text-red-400');
+            toggle.classList.add('bg-slate-700');
+            dot.classList.add('left-1', 'bg-slate-500');
+        } else if (status === 'idle') {
+            badge.classList.add('text-slate-500');
+            toggle.classList.add('bg-slate-700');
+            dot.classList.add('left-1', 'bg-slate-500');
+        } else {
+            // Running / Researching
+            badge.classList.add('text-brand-cyan');
+            toggle.classList.add('bg-brand-cyan/20');
+            dot.classList.add('right-1', 'bg-brand-cyan', 'active-glow');
         }
     }
 
@@ -315,12 +335,15 @@ class AutoResearchAgent {
     disableInputs(disabled) {
         document.getElementById('topic-input').disabled = disabled;
         document.getElementById('max-turns').disabled = disabled;
-        document.getElementById('start-btn').disabled = disabled;
+        const startBtn = document.getElementById('start-btn');
+        startBtn.disabled = disabled;
 
         if (disabled) {
-            document.getElementById('start-btn').innerHTML = '<span class="loading"></span> Running...';
+            startBtn.innerHTML = '<span class="loading mr-2"></span> Researching...';
+            this.updateStatus('researching');
         } else {
-            document.getElementById('start-btn').innerHTML = 'Start Research';
+            startBtn.innerHTML = 'Start Research';
+            // Don't set status to idle here as it might have finished or errored
         }
     }
 
