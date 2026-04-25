@@ -12,6 +12,9 @@ class AutoResearchAgent {
 
     setupEventListeners() {
         document.getElementById('start-btn').addEventListener('click', () => this.startResearch());
+        document.getElementById('pause-btn').addEventListener('click', () => this.pauseResearch());
+        document.getElementById('resume-btn').addEventListener('click', () => this.resumeResearch());
+        document.getElementById('stop-btn').addEventListener('click', () => this.stopResearch());
         document.getElementById('reset-btn').addEventListener('click', () => this.reset());
         document.getElementById('refresh-models-btn').addEventListener('click', () => this.refreshModels());
         
@@ -19,6 +22,34 @@ class AutoResearchAgent {
         document.getElementById('nav-history').addEventListener('click', () => this.toggleHistory());
         document.getElementById('history-search').addEventListener('input', (e) => this.loadHistory(e.target.value));
         document.getElementById('nav-home').addEventListener('click', () => this.toggleHome());
+    }
+
+    async pauseResearch() {
+        if (!this.taskId) return;
+        await fetch(`/api/research/pause/${this.taskId}`, { method: 'POST' });
+        this.updateStatus('paused');
+        document.getElementById('pause-btn').classList.add('hidden');
+        document.getElementById('resume-btn').classList.remove('hidden');
+    }
+
+    async resumeResearch() {
+        if (!this.taskId) return;
+        await fetch(`/api/research/resume/${this.taskId}`, { method: 'POST' });
+        this.updateStatus('researching');
+        document.getElementById('pause-btn').classList.remove('hidden');
+        document.getElementById('resume-btn').classList.add('hidden');
+    }
+
+    async stopResearch() {
+        if (!this.taskId) return;
+        await fetch(`/api/research/stop/${this.taskId}`, { method: 'POST' });
+        this.isRunning = false;
+        this.updateStatus('idle');
+        document.getElementById('start-btn').classList.remove('hidden');
+        document.getElementById('pause-btn').classList.add('hidden');
+        document.getElementById('resume-btn').classList.add('hidden');
+        document.getElementById('stop-btn').classList.add('hidden');
+        this.disableInputs(false);
     }
 
     toggleHistory() {
@@ -213,6 +244,13 @@ class AutoResearchAgent {
                 throw new Error(errorData.detail || 'Failed to load model');
             }
             
+            // Set as active model for research
+            await fetch('/api/models/set', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: key })
+            });
+
             await this.refreshModels();
         } catch (error) {
             console.error('Error loading model:', error);
@@ -223,6 +261,8 @@ class AutoResearchAgent {
             document.getElementById('model-loading-bar').style.width = '0%';
         }
     }
+
+    // ... (rest of the class)
 
     async unloadModel(instanceId) {
         try {
@@ -264,12 +304,11 @@ class AutoResearchAgent {
             // Start research via API
             const response = await fetch('/api/research', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     topic: topic,
-                    max_turns: maxTurns
+                    max_turns: maxTurns,
+                    integrations: [{"type": "search"}] // Enable search/browser integration
                 })
             });
 
@@ -280,6 +319,10 @@ class AutoResearchAgent {
             document.getElementById('status-section').style.display = 'block';
             document.getElementById('topic-display').textContent = topic;
             this.updateProgress(0, maxTurns);
+            
+            document.getElementById('start-btn').classList.add('hidden');
+            document.getElementById('pause-btn').classList.remove('hidden');
+            document.getElementById('stop-btn').classList.remove('hidden');
 
             // Connect to WebSocket
             this.connectWebSocket(this.taskId);

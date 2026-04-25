@@ -16,14 +16,18 @@ class LMStudioClient:
         self.api_key = api_key or os.getenv("LM_API_TOKEN", "lm-studio")
         self.client = OpenAI(base_url=self.openai_base_url, api_key=self.api_key)
 
+    def set_model(self, model: str):
+        self.model = model
+
     def chat_v1(self, input_text: str, system_prompt: str = None, integrations: list = None, context_length: int = 2048) -> str:
         """Call the native LM Studio V1 API with support for MCP integrations."""
-        # Ensure base URL doesn't end with /api/v1 if we're appending /chat, 
-        # but the current logic f"{self.v1_base_url}/chat" is standard.
-        # However, if the user provided http://localhost:1234, we should handle it.
         base = self.v1_base_url.rstrip("/")
         if not base.endswith("/api/v1"):
             base = f"{base}/api/v1"
+        
+        # Ensure integrations include search if not provided
+        if integrations is None:
+            integrations = [{"type": "search"}]
         
         url = f"{base}/chat"
         headers = {

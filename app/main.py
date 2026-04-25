@@ -185,6 +185,16 @@ async def list_models():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/models/set")
+async def set_model(request: ModelLoadRequest):
+    """Set the active model for research."""
+    try:
+        lm_client.set_model(request.model)
+        return {"status": "success", "model": request.model}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.websocket("/ws/research/{task_id}")
 async def websocket_research(websocket: WebSocket, task_id: str):
     """WebSocket endpoint for real-time research updates."""
