@@ -1,98 +1,176 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="h-full" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>LM Studio AutoResearch Agent</title>
+    <!-- Tailwind CSS CDN with plugins -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                brand: {
+                  cyan: '#00ffff',
+                  dark: '#0f172a',
+                  card: 'rgba(30, 41, 59, 0.5)',
+                  border: 'rgba(255, 255, 255, 0.1)',
+                }
+              }
+            }
+          }
+        }
+    </script>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-    <div class="container">
-        <header class="header">
-            <h1>🔬 LM Studio AutoResearch Agent</h1>
-            <p class="subtitle">Real-time research powered by local LM Studio</p>
-        </header>
+<body class="h-full flex flex-col">
+    <!-- BEGIN: MainLayout -->
+    <div class="flex flex-1 overflow-hidden p-6 gap-6" data-purpose="main-layout-container">
+        
+        <!-- BEGIN: Sidebar -->
+        <aside class="flex flex-col items-center py-8 glass-card rounded-2xl w-20 shrink-0 gap-6" data-purpose="navigation-sidebar">
+            <!-- Active Home Icon -->
+            <div class="p-3 rounded-xl bg-brand-cyan/20 text-brand-cyan active-glow cursor-pointer transition-all hover:scale-105" data-purpose="sidebar-item-active">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                </svg>
+            </div>
+            <!-- Other Icons (Placeholders) -->
+            <div class="p-3 text-slate-400 hover:text-brand-cyan cursor-pointer transition-colors">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                </svg>
+            </div>
+            <div class="p-3 text-slate-400 hover:text-brand-cyan cursor-pointer transition-colors">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                </svg>
+            </div>
+            
+            <div class="mt-auto p-3 text-slate-400 hover:text-brand-cyan cursor-pointer transition-colors">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                </svg>
+            </div>
+        </aside>
+        <!-- END: Sidebar -->
 
-        <div class="app-layout">
-            <aside class="sidebar">
-                <section class="models-section">
-                    <div class="section-header">
-                        <h2>🤖 Models</h2>
-                        <button id="refresh-models-btn" class="btn-icon" title="Refresh Models">🔄</button>
+        <!-- BEGIN: DashboardContent -->
+        <main class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
+            
+            <!-- BEGIN: ModelManagement -->
+            <section class="glass-card rounded-2xl flex flex-col overflow-hidden" data-purpose="model-management-column">
+                <header class="p-6 flex items-center justify-between border-b border-brand-border">
+                    <div class="flex items-center gap-3">
+                        <div class="text-brand-cyan">
+                            <svg class="h-6 w-6" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-semibold tracking-wide">Model Management</h2>
                     </div>
-                    <div id="models-list" class="models-list">
-                        <div class="loading-spinner">Loading models...</div>
-                    </div>
-                </section>
-            </aside>
-
-            <main class="main-content">
-                <!-- Input Section -->
-                <section class="input-section">
-                <div class="form-group">
-                    <label for="topic-input">Research Topic:</label>
-                    <input 
-                        type="text" 
-                        id="topic-input" 
-                        placeholder="e.g., climate change, artificial intelligence, quantum computing..." 
-                        class="topic-input"
-                    >
-                </div>
-                <div class="form-group">
-                    <label for="max-turns">Max Turns:</label>
-                    <input 
-                        type="number" 
-                        id="max-turns" 
-                        value="8" 
-                        min="1" 
-                        max="16" 
-                        class="max-turns-input"
-                    >
-                </div>
-                <button id="start-btn" class="btn btn-primary">Start Research</button>
-            </section>
-
-            <!-- Status Section -->
-            <section class="status-section" id="status-section" style="display: none;">
-                <div class="status-card">
-                    <div class="status-header">
-                        <h2>Research in Progress</h2>
-                        <span class="status-badge" id="status-badge">Starting...</span>
-                    </div>
-                    <div class="progress-info">
-                        <p><strong>Topic:</strong> <span id="topic-display"></span></p>
-                        <p><strong>Turn:</strong> <span id="turn-display">0</span>/8</p>
-                    </div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar" id="progress-bar"></div>
-                    </div>
+                    <button id="refresh-models-btn" class="p-2 text-slate-400 hover:text-brand-cyan transition-colors" title="Refresh Models">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </header>
+                <div class="p-6 space-y-8 overflow-y-auto" id="models-list">
+                    <div class="loading-spinner">Loading models...</div>
                 </div>
             </section>
+            <!-- END: ModelManagement -->
 
-            <!-- Output Section -->
-            <section class="output-section">
-                <h2>Research Output</h2>
-                <div class="output-container" id="output-container">
-                    <div class="output-placeholder">Research output will appear here...</div>
+            <!-- BEGIN: ResearchWorkspace -->
+            <section class="glass-card rounded-2xl flex flex-col overflow-hidden" data-purpose="research-workspace-column">
+                <header class="p-6 flex items-center justify-between border-b border-brand-border">
+                    <div class="flex items-center gap-3">
+                        <div class="text-brand-cyan">
+                            <svg class="h-6 w-6" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M11,4A7,7 0 0,1 18,11C18,12.5 17.5,14 16.61,15.19L17.42,16H18L23,21L21,23L16,18V17.41L15.19,16.6C14,17.5 12.5,18 11,18A7,7 0 0,1 4,11A7,7 0 0,1 11,4M11,6A5,5 0 0,0 6,11A5,5 0 0,0 11,16A5,5 0 0,0 16,11A5,5 0 0,0 11,6M10,7H12V10H15V12H12V15H10V12H7V10H10V7Z"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-semibold tracking-wide">Research Workspace</h2>
+                    </div>
+                    <!-- Status Toggle (Indicator) -->
+                    <div class="flex items-center gap-2">
+                        <span id="status-badge" class="text-[10px] uppercase font-bold tracking-widest text-slate-500">Idle</span>
+                        <div class="w-10 h-5 bg-slate-700 rounded-full p-1 relative transition-colors" id="status-toggle">
+                            <div class="w-3 h-3 bg-slate-500 rounded-full absolute left-1 transition-all" id="status-toggle-dot"></div>
+                        </div>
+                    </div>
+                </header>
+                
+                <div class="p-6 flex flex-col h-full gap-6">
+                    <!-- Research Inputs -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-2">Research Topic:</label>
+                            <input id="topic-input" class="w-full bg-slate-800/80 border border-brand-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-brand-cyan focus:border-brand-cyan outline-none transition-all text-white" type="text" placeholder="e.g. artificial intelligence AGI"/>
+                        </div>
+                        <div class="flex gap-4 items-end">
+                            <div class="w-1/3">
+                                <label class="block text-xs font-medium text-slate-400 mb-2">Max Turns:</label>
+                                <select id="max-turns" class="w-full bg-slate-800/80 border border-brand-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-brand-cyan focus:border-brand-cyan outline-none appearance-none text-white">
+                                    <option value="4">4 Turns</option>
+                                    <option value="8" selected>8 Turns</option>
+                                    <option value="12">12 Turns</option>
+                                    <option value="24">24 Turns</option>
+                                </select>
+                            </div>
+                            <button id="start-btn" class="flex-1 bg-brand-cyan hover:bg-cyan-400 text-brand-dark font-bold py-2 rounded-lg transition-all active:scale-[0.98] active-glow disabled:opacity-50 disabled:cursor-not-allowed">
+                                Start Research
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Section (Hidden by default) -->
+                    <div id="status-section" class="space-y-2" style="display: none;">
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>Progress: <span id="topic-display" class="text-brand-cyan italic"></span></span>
+                            <span>Turn <span id="turn-display" class="text-white font-mono">0</span></span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="bg-brand-cyan h-full active-glow transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Research Output -->
+                    <div class="flex-1 flex flex-col border border-brand-cyan/30 rounded-lg overflow-hidden" data-purpose="research-output-container">
+                        <div class="px-4 py-2 text-[10px] uppercase font-bold tracking-widest bg-brand-cyan/10 text-brand-cyan border-b border-brand-cyan/20">
+                            Research Output
+                        </div>
+                        <div id="output-container" class="terminal-window flex-1 p-4 text-brand-cyan/80 text-sm overflow-y-auto">
+                            <div class="output-placeholder opacity-50 italic">&gt;_ Research output will appear here...</div>
+                        </div>
+                    </div>
+
+                    <!-- Final Answer (Hidden by default) -->
+                    <div id="answer-section" class="glass-card rounded-lg p-4 space-y-3 border-brand-cyan/20" style="display: none;">
+                        <div class="text-brand-cyan text-xs font-bold uppercase tracking-wider">Final Analysis</div>
+                        <div id="final-answer" class="text-sm text-slate-300 leading-relaxed max-h-48 overflow-y-auto"></div>
+                        <button id="reset-btn" class="w-full text-xs text-slate-400 hover:text-white transition-colors py-2 border border-slate-700 rounded hover:border-slate-500">
+                            Clear and Start New Research
+                        </button>
+                    </div>
                 </div>
             </section>
-
-            <!-- Final Answer Section -->
-            <section class="answer-section" id="answer-section" style="display: none;">
-                <h2>Final Answer</h2>
-                <div class="answer-card">
-                    <p id="final-answer"></p>
-                </div>
-                <button id="reset-btn" class="btn btn-secondary">Start New Research</button>
-            </section>
+            <!-- END: ResearchWorkspace -->
         </main>
-        </div>
-
-        <footer class="footer">
-
-            <p>LM Studio AutoResearch Agent v0.1.0 | Model: <span id="model-name">gemma-4-2b</span></p>
-        </footer>
+        <!-- END: DashboardContent -->
     </div>
+    <!-- END: MainLayout -->
+
+    <!-- BEGIN: Footer -->
+    <footer class="py-4 px-8 flex justify-between items-center text-[10px] text-slate-500 border-t border-brand-border bg-brand-dark/20" data-purpose="page-footer">
+        <div>LM Studio AutoResearch Agent v0.1.1</div>
+        <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan"></span>
+            Model: <span id="model-name" class="text-slate-300">Detecting...</span>
+        </div>
+    </footer>
+    <!-- END: Footer -->
 
     <script src="/static/script.js"></script>
 </body>
