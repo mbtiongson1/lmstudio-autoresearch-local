@@ -51,37 +51,58 @@ class AutoResearchAgent {
         listContainer.innerHTML = '';
 
         if (this.models.length === 0) {
-            listContainer.innerHTML = '<div class="output-placeholder">No models downloaded</div>';
+            listContainer.innerHTML = '<div class="text-slate-500 italic text-sm text-center py-10">No models found in LM Studio</div>';
             return;
         }
 
-        this.models.forEach(model => {
-            const isLoaded = model.loaded_instances && model.loaded_instances.length > 0;
-            const card = document.createElement('div');
-            card.className = `model-card ${isLoaded ? 'loaded' : ''}`;
+        // Categorize models
+        const loadedModels = this.models.filter(m => m.loaded_instances && m.loaded_instances.length > 0);
+        const offlineModels = this.models.filter(m => !m.loaded_instances || m.loaded_instances.length === 0);
 
-            const sizeGB = (model.size_bytes / (1024 ** 3)).toFixed(2);
+        const renderSection = (title, models) => {
+            if (models.length === 0) return '';
             
-            card.innerHTML = `
-                <div class="model-header">
-                    <div>
-                        <span class="model-name">${model.display_name}</span>
-                        <span class="model-type">${model.type} | ${model.architecture || 'gguf'}</span>
+            let html = `<div class="space-y-4">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">${title}</h3>
+                <div class="space-y-3">`;
+            
+            models.forEach(model => {
+                const isLoaded = model.loaded_instances && model.loaded_instances.length > 0;
+                const sizeGB = (model.size_bytes / (1024 ** 3)).toFixed(2);
+                
+                html += `
+                    <div class="model-card ${isLoaded ? 'loaded' : ''} p-4 rounded-xl border border-white/5 bg-slate-900/40 hover:bg-slate-800/60 transition-all">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="overflow-hidden">
+                                <span class="block text-sm font-semibold text-slate-200 truncate" title="${model.display_name}">${model.display_name}</span>
+                                <span class="block text-[10px] text-slate-500 uppercase tracking-wider">${model.architecture || 'gguf'} • ${sizeGB} GB</span>
+                            </div>
+                            <span class="text-[9px] px-2 py-0.5 rounded-full ${isLoaded ? 'bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30' : 'bg-slate-800 text-slate-500 border border-white/5'}">
+                                ${isLoaded ? 'LOADED' : 'OFFLINE'}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between mt-4">
+                            <span class="text-[10px] text-slate-400 font-mono">${model.max_context_length} ctx</span>
+                            <div class="flex gap-2">
+                                ${isLoaded 
+                                    ? `<button class="text-[10px] px-3 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors" onclick="agent.unloadModel('${model.loaded_instances[0].id}')">Unload</button>`
+                                    : `<button class="text-[10px] px-3 py-1 rounded bg-brand-cyan/10 text-brand-cyan hover:bg-brand-cyan/20 transition-colors" onclick="agent.loadModel('${model.key}')">Load</button>`
+                                }
+                            </div>
+                        </div>
                     </div>
-                    <span class="model-badge ${isLoaded ? 'loaded' : ''}">${isLoaded ? 'LOADED' : 'OFFLINE'}</span>
-                </div>
-                <div class="model-info-row">
-                    <span>${model.quantization?.name || 'Unknown'} • ${sizeGB} GB • ${model.max_context_length} ctx</span>
-                </div>
-                <div class="model-actions">
-                    ${isLoaded 
-                        ? `<button class="btn btn-secondary btn-sm" onclick="agent.unloadModel('${model.loaded_instances[0].id}')">Unload</button>`
-                        : `<button class="btn btn-primary btn-sm" onclick="agent.loadModel('${model.key}')">Load</button>`
-                    }
-                </div>
-            `;
-            listContainer.appendChild(card);
-        });
+                `;
+            });
+            
+            html += `</div></div>`;
+            return html;
+        };
+
+        let containerHtml = '';
+        containerHtml += renderSection('Loaded Models', loadedModels);
+        containerHtml += renderSection('Available Models', offlineModels);
+        
+        listContainer.innerHTML = containerHtml;
     }
 
     async loadModel(key) {
@@ -245,7 +266,9 @@ class AutoResearchAgent {
 
         const actionSpan = document.createElement('span');
         actionSpan.className = 'output-action';
-        actionSpan.textContent = type.toUpperCase();
+        // Map types to better labels if needed
+        const label = type === 'think' ? 'THOUGHT' : type.toUpperCase();
+        actionSpan.textContent = `[${label}]`;
 
         line.appendChild(actionSpan);
         line.appendChild(document.createTextNode(content));
