@@ -13,23 +13,12 @@ Nothing else.
 
 You have access to Hugging Face model search via MCP. You can use it as needed before providing your next line of output."""
 
-DEFAULT_INTEGRATIONS = [
-    {
-        "type": "ephemeral_mcp",
-        "server_label": "huggingface",
-        "server_url": "https://huggingface.co/mcp",
-        "allowed_tools": []
-    }
-]
-
-
 class ResearchOrchestrator:
-    def __init__(self, lm_client: LMStudioClient, state_manager: StateManager, callback: Optional[Callable] = None, integrations: list = None):
+    def __init__(self, lm_client: LMStudioClient, state_manager: StateManager, callback: Optional[Callable] = None):
         self.lm_client = lm_client
         self.state_manager = state_manager
         self.callback = callback  # Optional: called on each event for real-time updates
         self.search_service = SearchService()
-        self.integrations = integrations if integrations is not None else DEFAULT_INTEGRATIONS
 
     def _emit_event(self, task_id: str, turn: int, action: str, content: str):
         """Emit an event to observers (for real-time updates)."""
@@ -61,7 +50,7 @@ class ResearchOrchestrator:
         """Call the LM Studio model for next action."""
         state_block = f"Topic: {topic}\nFindings: {summary}\nTurn: {turn}/8"
         if hasattr(self.lm_client, "chat_v1"):
-            return self.lm_client.chat_v1(state_block, system_prompt=SYSTEM_PROMPT, integrations=self.integrations)
+            return self.lm_client.chat_v1(state_block, system_prompt=SYSTEM_PROMPT)
         return self.lm_client.call_model(SYSTEM_PROMPT, state_block, max_tokens=80, temperature=0.3)
 
     def research(self, task_id: str, topic: str, max_turns: int = 8) -> str:
