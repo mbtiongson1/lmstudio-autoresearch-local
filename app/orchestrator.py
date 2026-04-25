@@ -46,12 +46,35 @@ class ResearchOrchestrator:
             return "answer", raw[7:].strip()
         return "unknown", raw
 
-    def _agent_step(self, topic: str, summary: str, turn: int) -> str:
-        """Call the LM Studio model for next action."""
+    def _agent_step(self, task_id: str, topic: str, summary: str, turn: int) -> str:
+        """Call the LM Studio model for next action and stream events."""
         state_block = f"Topic: {topic}\nFindings: {summary}\nTurn: {turn}/8"
-        if hasattr(self.lm_client, "chat_v1"):
-            return self.lm_client.chat_v1(state_block, system_prompt=SYSTEM_PROMPT)
-        return self.lm_client.call_model(SYSTEM_PROMPT, state_block, max_tokens=80, temperature=0.3)
+        
+        full_content = ""
+        try:
+            # Use streaming events if model is compatible
+            stream = self.lm_client.chat_v1_stream(state_block, system_prompt=SYSTEM_PROMPT)
+            for event_type, data in stream:
+                # Emit specific events for UI
+                if self.callback:
+                    self.callback(task_id, {"type": event_type, "data": data})
+                
+                # Aggregate content
+                if event_type == "message.delta":
+                    full_content += data.get("content", "")
+                elif event_type == "reasoning.delta":
+                    # You might also want to track reasoning if needed
+                    pass
+                elif event_type == "chat.end":
+                    # The chat.end event contains the aggregated response
+                    full_content = ""
+                    for item in data.get("result", {}).get("output", []):
+                        if item.get("type") in ["message", "reasoning"]:
+                            full_content += item.get("content", "")
+            return full_content.strip()
+        except Exception:
+            # Fallback for older models
+            return self.lm_client.call_model(SYSTEM_PROMPT, state_block, max_tokens=80, temperature=0.3)
 
     def research(self, task_id: str, topic: str, max_turns: int = 8) -> str:
         """Execute the 8-turn research loop."""
@@ -60,8 +83,9 @@ class ResearchOrchestrator:
 
         for turn in range(1, max_turns + 1):
             try:
-                raw = self._agent_step(topic, summary, turn)
+                raw = self._agent_step(task_id, topic, summary, turn)
                 self.state_manager.update_session(task_id, current_turn=turn)
+                # ...
 
                 action_type, content = self._parse_action(raw)
 

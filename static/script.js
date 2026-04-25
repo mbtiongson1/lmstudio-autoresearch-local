@@ -361,16 +361,25 @@ class AutoResearchAgent {
     }
 
     handleMessage(message) {
+        // Handle SSE-style event stream from backend
         if (message.type === 'action') {
-            const { turn, action, content } = message;
+            const { turn, action, content } = message.data || message;
             this.addOutput(action, `Turn ${turn}: ${content}`);
             this.updateProgress(turn, 8);
-        } else if (message.type === 'complete') {
-            this.showFinalAnswer(message.answer);
+        } else if (message.type === 'message.delta') {
+            // Incremental message update
+            this.addOutput('message', message.data.content);
+        } else if (message.type === 'chat.end') {
+            const output = message.data.result.output;
+            let finalAnswer = "";
+            output.forEach(item => {
+                if (item.type === 'message') finalAnswer += item.content;
+            });
+            this.showFinalAnswer(finalAnswer);
             this.isRunning = false;
             this.disableInputs(false);
         } else if (message.type === 'error') {
-            this.addOutput('error', `Error: ${message.content}`);
+            this.addOutput('error', `Error: ${message.data?.error?.message || message.content}`);
             this.isRunning = false;
             this.disableInputs(false);
         } else if (message.type === 'status') {
