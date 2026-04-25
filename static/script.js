@@ -306,7 +306,12 @@ class AutoResearchAgent {
                 body: JSON.stringify({
                     topic: topic,
                     max_turns: maxTurns,
-                    integrations: [{"type": "search"}] // Enable search/browser integration
+                    integrations: [{
+                        "type": "ephemeral_mcp",
+                        "server_label": "search",
+                        "server_url": "https://brave.search.mcp", // Example URL
+                        "allowed_tools": []
+                    }]
                 })
             });
 
