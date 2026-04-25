@@ -362,15 +362,21 @@ class AutoResearchAgent {
 
     handleMessage(message) {
         // Handle SSE-style event stream from backend
-        if (message.type === 'action') {
+        // Backend sends {"type": "event_type", "data": {...}}
+        const type = message.type;
+        const data = message.data;
+
+        if (type === 'action') {
+            // This is the original orchestrator event
             const { turn, action, content } = message.data || message;
             this.addOutput(action, `Turn ${turn}: ${content}`);
             this.updateProgress(turn, 8);
-        } else if (message.type === 'message.delta') {
-            // Incremental message update
-            this.addOutput('message', message.data.content);
-        } else if (message.type === 'chat.end') {
-            const output = message.data.result.output;
+        } else if (type === 'message.delta') {
+            this.addOutput('think', data.content);
+        } else if (type === 'reasoning.delta') {
+            this.addOutput('think', data.content);
+        } else if (type === 'chat.end') {
+            const output = data.result.output;
             let finalAnswer = "";
             output.forEach(item => {
                 if (item.type === 'message') finalAnswer += item.content;
@@ -378,11 +384,11 @@ class AutoResearchAgent {
             this.showFinalAnswer(finalAnswer);
             this.isRunning = false;
             this.disableInputs(false);
-        } else if (message.type === 'error') {
-            this.addOutput('error', `Error: ${message.data?.error?.message || message.content}`);
+        } else if (type === 'error') {
+            this.addOutput('error', `Error: ${data?.error?.message || 'Unknown error'}`);
             this.isRunning = false;
             this.disableInputs(false);
-        } else if (message.type === 'status') {
+        } else if (type === 'status') {
             this.updateStatus(message.status);
         }
     }
