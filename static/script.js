@@ -189,18 +189,13 @@ class AutoResearchAgent {
 
     async loadModel(key) {
         try {
-            // Find the button and show loading state
-            const buttons = document.querySelectorAll(`.model-card button`);
-            buttons.forEach(btn => {
-                if (btn.textContent.trim() === 'Load') {
-                    const card = btn.closest('.model-card');
-                    const nameEl = card.querySelector('.text-sm.font-semibold');
-                    if (nameEl && nameEl.textContent.includes(key.split('/').pop())) {
-                        btn.disabled = true;
-                        btn.innerHTML = '<span class="loading"></span> Loading...';
-                    }
-                }
-            });
+            const container = document.getElementById('model-loading-progress-container');
+            const bar = document.getElementById('model-loading-bar');
+            const text = document.getElementById('model-loading-text');
+            
+            container.classList.remove('hidden');
+            bar.style.width = '30%';
+            text.textContent = `Loading ${key.split('/').pop()}...`;
 
             const response = await fetch('/api/models/load', {
                 method: 'POST',
@@ -210,6 +205,8 @@ class AutoResearchAgent {
                     echo_load_config: true
                 })
             });
+
+            bar.style.width = '100%';
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -221,6 +218,9 @@ class AutoResearchAgent {
             console.error('Error loading model:', error);
             alert(`Error loading model: ${error.message}`);
             this.refreshModels(); // Reset UI
+        } finally {
+            document.getElementById('model-loading-progress-container').classList.add('hidden');
+            document.getElementById('model-loading-bar').style.width = '0%';
         }
     }
 
