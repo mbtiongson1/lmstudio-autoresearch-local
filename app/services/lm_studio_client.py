@@ -74,6 +74,46 @@ class LMStudioClient:
             print(f"DEBUG: V1 API Error: {str(e)}")
             raise
 
+    def chat_v1_stream(self, input_text: str, system_prompt: str = None, context_length: int = 2048):
+        """Call the native LM Studio V1 API with streaming enabled."""
+        base = self.v1_base_url.rstrip("/")
+        if not base.endswith("/api/v1"):
+            base = f"{base}/api/v1"
+        
+        url = f"{base}/chat"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream"
+        }
+        
+        payload = {
+            "model": self.model,
+            "input": input_text,
+            "context_length": context_length,
+            "stream": True
+        }
+        
+        if system_prompt:
+            payload["system_prompt"] = system_prompt
+            
+        try:
+            with requests.post(url, headers=headers, json=payload, stream=True, timeout=600) as response:
+                response.raise_for_status()
+                event_type = "chat.start"
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith("event:"):
+                            event_type = decoded_line.split(":")[1].strip()
+                            continue
+                        if decoded_line.startswith("data:"):
+                            data = json.loads(decoded_line.split(":", 1)[1].strip())
+                            yield event_type, data
+        except Exception as e:
+            print(f"DEBUG: V1 Stream API Error: {str(e)}")
+            raise
+
     def call_model(self, system_prompt: str, user_message: str, max_tokens: int = 80, temperature: float = 0.3) -> str:
         """Fallback to OpenAI-compatible SDK call if needed."""
         try:
