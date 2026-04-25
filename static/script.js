@@ -305,13 +305,7 @@ class AutoResearchAgent {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     topic: topic,
-                    max_turns: maxTurns,
-                    integrations: [{
-                        "type": "ephemeral_mcp",
-                        "server_label": "fetch",
-                        "command": "uvx",
-                        "args": ["mcp-server-fetch"]
-                    }]
+                    max_turns: maxTurns
                 })
             });
 

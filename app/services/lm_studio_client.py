@@ -19,15 +19,11 @@ class LMStudioClient:
     def set_model(self, model: str):
         self.model = model
 
-    def chat_v1(self, input_text: str, system_prompt: str = None, integrations: list = None, context_length: int = 2048) -> str:
-        """Call the native LM Studio V1 API with support for MCP integrations."""
+    def chat_v1(self, input_text: str, system_prompt: str = None, context_length: int = 2048) -> str:
+        """Call the native LM Studio V1 API."""
         base = self.v1_base_url.rstrip("/")
         if not base.endswith("/api/v1"):
             base = f"{base}/api/v1"
-        
-        # Ensure integrations include search if not provided
-        if integrations is None:
-            integrations = [{"type": "search"}]
         
         url = f"{base}/chat"
         headers = {
@@ -44,9 +40,6 @@ class LMStudioClient:
         if system_prompt:
             payload["system_prompt"] = system_prompt
             
-        if integrations:
-            payload["integrations"] = integrations
-
         try:
             print(f"DEBUG: Request URL: {url}")
             print(f"DEBUG: Request Payload: {json.dumps(payload, indent=2)}")
@@ -62,9 +55,6 @@ class LMStudioClient:
             for item in output_items:
                 if item.get("type") in ["message", "reasoning"]:
                     combined_text += item.get("content", "")
-                elif item.get("type") == "tool_call":
-                    # For debugging/tracing tool use
-                    print(f"DEBUG: Tool Call -> {item.get('tool')}")
                     
             return combined_text.strip()
         except Exception as e:
