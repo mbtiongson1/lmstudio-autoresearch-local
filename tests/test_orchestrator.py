@@ -49,11 +49,11 @@ class TestResearchOrchestrator:
 
     def test_agent_step(self, mock_lm_client, orchestrator):
         """Test agent step calls LM Studio."""
-        mock_lm_client.call_model.return_value = "SEARCH: test query"
+        mock_lm_client.chat_v1.return_value = "SEARCH: test query"
         result = orchestrator._agent_step("test topic", "summary", 1)
         
         assert result == "SEARCH: test query"
-        mock_lm_client.call_model.assert_called_once()
+        mock_lm_client.chat_v1.assert_called_once()
 
     def test_emit_event(self, orchestrator):
         """Test event emission."""
