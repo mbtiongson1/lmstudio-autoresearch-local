@@ -13,9 +13,22 @@
             <p class="subtitle">Real-time research powered by local LM Studio</p>
         </header>
 
-        <main class="main-content">
-            <!-- Input Section -->
-            <section class="input-section">
+        <div class="app-layout">
+            <aside class="sidebar">
+                <section class="models-section">
+                    <div class="section-header">
+                        <h2>🤖 Models</h2>
+                        <button id="refresh-models-btn" class="btn-icon" title="Refresh Models">🔄</button>
+                    </div>
+                    <div id="models-list" class="models-list">
+                        <div class="loading-spinner">Loading models...</div>
+                    </div>
+                </section>
+            </aside>
+
+            <main class="main-content">
+                <!-- Input Section -->
+                <section class="input-section">
                 <div class="form-group">
                     <label for="topic-input">Research Topic:</label>
                     <input 
@@ -73,8 +86,10 @@
                 <button id="reset-btn" class="btn btn-secondary">Start New Research</button>
             </section>
         </main>
+        </div>
 
         <footer class="footer">
+
             <p>LM Studio AutoResearch Agent v0.1.0 | Model: <span id="model-name">gemma-4-2b</span></p>
         </footer>
     </div>
