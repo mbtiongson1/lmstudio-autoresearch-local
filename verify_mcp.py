@@ -1,8 +1,12 @@
 import os
 import json
+from dotenv import load_dotenv
 from app.services.lm_studio_client import LMStudioClient
 from app.services.state_manager import StateManager
 from app.orchestrator import ResearchOrchestrator
+
+# Load environment variables
+load_dotenv()
 
 def verify():
     # Ensure environment variables are set or use defaults

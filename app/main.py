@@ -1,6 +1,8 @@
 """FastAPI application with research endpoints and WebSocket support"""
 import asyncio
 import json
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -9,6 +11,9 @@ from app.models.schemas import ResearchRequest, ResearchStatus
 from app.services.lm_studio_client import LMStudioClient
 from app.services.state_manager import StateManager
 from app.orchestrator import ResearchOrchestrator
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 # Global instances
