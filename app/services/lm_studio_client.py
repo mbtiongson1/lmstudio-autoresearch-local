@@ -30,8 +30,8 @@ class LMStudioClient:
     def set_model(self, model: str):
         self.model = model
 
-    def chat_v1_stream(self, input_text: str, system_prompt: str = None, context_length: int = 2048):
-        """Call the native LM Studio V1 API with streaming enabled."""
+    def chat_v1(self, input_text: str, system_prompt: str = None, integrations: list = None, context_length: int = 2048) -> str:
+        """Call the native LM Studio V1 API with support for MCP integrations."""
         base = self.v1_base_url.rstrip("/")
         if not base.endswith("/api/v1"):
             base = f"{base}/api/v1"
@@ -39,43 +39,47 @@ class LMStudioClient:
         url = f"{base}/chat"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-            "Accept": "text/event-stream"
+            "Content-Type": "application/json"
         }
         
         payload = {
             "model": self.model,
             "input": input_text,
-            "context_length": context_length,
-            "stream": True
+            "context_length": context_length
         }
         
         if system_prompt:
             payload["system_prompt"] = system_prompt
             
+        if integrations:
+            payload["integrations"] = integrations
+
         try:
-            with requests.post(url, headers=headers, json=payload, stream=True, timeout=600) as response:
-                response.raise_for_status()
-                for line in response.iter_lines():
-                    if line:
-                        decoded_line = line.decode('utf-8')
-                        if decoded_line.startswith("event:"):
-                            event_type = decoded_line.split(":")[1].strip()
-                            continue
-                        if decoded_line.startswith("data:"):
-                            data = json.loads(decoded_line.split(":", 1)[1].strip())
-                            yield event_type, data
+            response = requests.post(url, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()
+            
+            data = response.json()
+            output_items = data.get("output", [])
+            
+            combined_text = ""
+            for item in output_items:
+                if item.get("type") in ["message", "reasoning"]:
+                    combined_text += item.get("content", "")
+                elif item.get("type") == "tool_call":
+                    # Tool tracing
+                    print(f"DEBUG: Tool Call -> {item.get('tool')}")
+                    
+            return combined_text.strip()
         except Exception as e:
-            print(f"DEBUG: V1 Stream API Error: {str(e)}")
+            print(f"DEBUG: V1 API Error: {str(e)}")
             raise
 
     def call_model(self, system_prompt: str, user_message: str, max_tokens: int = 80, temperature: float = 0.3) -> str:
         """Fallback to OpenAI-compatible SDK call if needed."""
         try:
-            # Try using the V1 API first for reasoning/tool support if the model is compatible
             return self.chat_v1(user_message, system_prompt=system_prompt)
         except Exception:
-            # Fallback to standard OpenAI SDK
+            # Fallback
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[

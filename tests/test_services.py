@@ -62,40 +62,42 @@ class TestLMStudioClient:
 class TestSearchService:
     """Test DuckDuckGo search service."""
 
-    @patch('app.services.search_service.requests.get')
-    def test_search_with_results(self, mock_get):
+    @patch('app.services.search_service.httpx.Client')
+    def test_search_with_results(self, mock_client):
         """Test search with successful results."""
+        mock_instance = Mock()
         mock_response = Mock()
-        mock_response.json.return_value = {
-            'AbstractText': 'Climate change is...',
-            'RelatedTopics': [
-                {'Text': 'Global warming'},
-                {'Text': 'Greenhouse gases'}
-            ]
-        }
-        mock_get.return_value = mock_response
+        mock_response.text = '<html><a class="result__url" href="http://example.com">Example</a></html>'
+        mock_instance.post.return_value = mock_response
+        mock_client.return_value.__enter__.return_value = mock_instance
+
+        # We need to mock the recursive call too
+        mock_response2 = Mock()
+        mock_response2.text = '<html><body>Climate change is...</body></html>'
+        mock_instance.get.return_value = mock_response2
 
         result = SearchService.search('climate change')
         assert 'Climate change is' in result
         assert len(result) <= 400
 
-    @patch('app.services.search_service.requests.get')
-    def test_search_no_results(self, mock_get):
+    @patch('app.services.search_service.httpx.Client')
+    def test_search_no_results(self, mock_client):
         """Test search with no results."""
+        mock_instance = Mock()
         mock_response = Mock()
-        mock_response.json.return_value = {
-            'AbstractText': '',
-            'RelatedTopics': []
-        }
-        mock_get.return_value = mock_response
+        mock_response.text = '<html></html>'
+        mock_instance.post.return_value = mock_response
+        mock_client.return_value.__enter__.return_value = mock_instance
 
         result = SearchService.search('zzzzzzzzz')
-        assert result == "No results found."
+        assert result == "No search results found."
 
-    @patch('app.services.search_service.requests.get')
-    def test_search_error_handling(self, mock_get):
+    @patch('app.services.search_service.httpx.Client')
+    def test_search_error_handling(self, mock_client):
         """Test search error handling."""
-        mock_get.side_effect = Exception("Network error")
+        mock_instance = Mock()
+        mock_instance.post.side_effect = Exception("Network error")
+        mock_client.return_value.__enter__.return_value = mock_instance
 
         result = SearchService.search('query')
         assert "Search error" in result
