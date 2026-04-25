@@ -329,7 +329,7 @@ class AutoResearchAgent {
 
     clearOutput() {
         const container = document.getElementById('output-container');
-        container.innerHTML = '<div class="output-placeholder">Research in progress...</div>';
+        container.innerHTML = '<div class="output-placeholder opacity-50 italic">&gt;_ Research in progress...</div>';
     }
 
     disableInputs(disabled) {
