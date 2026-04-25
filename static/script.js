@@ -192,9 +192,13 @@ class AutoResearchAgent {
             // Find the button and show loading state
             const buttons = document.querySelectorAll(`.model-card button`);
             buttons.forEach(btn => {
-                if (btn.textContent === 'Load' && btn.closest('.model-card').querySelector('.model-name').textContent.includes(key.split('/').pop())) {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="loading"></span> Loading...';
+                if (btn.textContent.trim() === 'Load') {
+                    const card = btn.closest('.model-card');
+                    const nameEl = card.querySelector('.text-sm.font-semibold');
+                    if (nameEl && nameEl.textContent.includes(key.split('/').pop())) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="loading"></span> Loading...';
+                    }
                 }
             });
 
