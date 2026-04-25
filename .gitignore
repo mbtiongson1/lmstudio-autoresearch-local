@@ -17,3 +17,4 @@ htmlcov/
 .env.local
 .DS_Store
 *.log
+.worktrees/
