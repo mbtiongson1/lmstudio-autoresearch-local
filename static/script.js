@@ -144,13 +144,11 @@ class AutoResearchAgent {
             this.models = data.models || [];
             this.renderModels();
             
-            // Update current model display in footer
+            // Update current model display in footer and research section
             const loadedModel = this.models.find(m => m.loaded_instances && m.loaded_instances.length > 0);
-            if (loadedModel) {
-                document.getElementById('model-name').textContent = loadedModel.key;
-            } else {
-                document.getElementById('model-name').textContent = 'None';
-            }
+            const modelName = loadedModel ? loadedModel.key : 'None';
+            document.getElementById('model-name').textContent = modelName;
+            document.getElementById('research-active-model').textContent = modelName;
         } catch (error) {
             console.error('Error fetching models:', error);
             listContainer.innerHTML = `<div class="loading-spinner" style="color: var(--error-color)">Error: ${error.message}</div>`;
