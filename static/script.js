@@ -308,9 +308,9 @@ class AutoResearchAgent {
                     max_turns: maxTurns,
                     integrations: [{
                         "type": "ephemeral_mcp",
-                        "server_label": "search",
-                        "server_url": "https://brave.search.mcp", // Example URL
-                        "allowed_tools": []
+                        "server_label": "fetch",
+                        "command": "uvx",
+                        "args": ["mcp-server-fetch"]
                     }]
                 })
             });
