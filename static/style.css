@@ -368,6 +368,10 @@ body {
     }
 }
 
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
 .loading {
     display: inline-block;
     width: 16px;
