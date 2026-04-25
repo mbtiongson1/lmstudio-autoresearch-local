@@ -104,7 +104,7 @@ class TestResearchOrchestrator:
 
     def test_research_error_handling(self, mock_lm_client, orchestrator):
         """Test research handles errors gracefully."""
-        mock_lm_client.call_model.side_effect = Exception("API Error")
+        mock_lm_client.chat_v1.side_effect = Exception("API Error")
         
         state_manager = orchestrator.state_manager
         task_id = state_manager.create_session("test topic")
