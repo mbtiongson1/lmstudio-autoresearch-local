@@ -1,6 +1,6 @@
 """Research orchestrator - manages the 8-turn research loop"""
 from typing import Callable, Optional
-from app.services import LMStudioClient
+from app.services.lm_studio_client import LMStudioClient
 from app.services.search_service import SearchService
 from app.services.state_manager import StateManager
 
