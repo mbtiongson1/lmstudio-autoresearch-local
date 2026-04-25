@@ -7,7 +7,10 @@ from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
-from app.models.schemas import ResearchRequest, ResearchStatus
+from app.models.schemas import (
+    ResearchRequest, ResearchStatus,
+    ModelsListResponse, ModelLoadRequest, ModelUnloadRequest
+)
 from app.services.lm_studio_client import LMStudioClient
 from app.services.state_manager import StateManager
 from app.orchestrator import ResearchOrchestrator
@@ -107,6 +110,41 @@ async def get_status(task_id: str):
         current_turn=session["current_turn"],
         history=session["history"]
     )
+
+
+@app.get("/api/models", response_model=ModelsListResponse)
+async def get_models():
+    """List available models from LM Studio."""
+    try:
+        return lm_client.list_models()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/models/load")
+async def load_model(request: ModelLoadRequest):
+    """Load a specific model."""
+    try:
+        return lm_client.load_model(
+            request.model,
+            context_length=request.context_length,
+            eval_batch_size=request.eval_batch_size,
+            flash_attention=request.flash_attention,
+            num_experts=request.num_experts,
+            offload_kv_cache_to_gpu=request.offload_kv_cache_to_gpu,
+            echo_load_config=request.echo_load_config
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/models/unload")
+async def unload_model(request: ModelUnloadRequest):
+    """Unload a specific model instance."""
+    try:
+        return lm_client.unload_model(request.instance_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.websocket("/ws/research/{task_id}")
