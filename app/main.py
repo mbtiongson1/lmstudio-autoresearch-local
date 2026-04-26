@@ -1,48 +1,30 @@
 """FastAPI application with research endpoints and WebSocket support"""
 import asyncio
-import json
-import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from app.models.schemas import (
-    ResearchRequest, ResearchStatus,
-    ModelsListResponse, ModelLoadRequest, ModelUnloadRequest
+    ResearchRequest,
+    ResearchStatus,
+    LifecycleResponse,
+    ModelLoadRequest,
+    ModelUnloadRequest,
 )
 from app.services.lm_studio_client import LMStudioClient
-from app.services.state_manager import StateManager
-from app.services import db_manager
-from app.orchestrator import ResearchOrchestrator
+from app.services.state_store import StateStore
+from app.services.run_manager import RunManager
 
 # Load environment variables from .env file
 load_dotenv()
 
 
 # Global instances
-state_manager = StateManager()
 lm_client = LMStudioClient()
+state_store = StateStore()
+run_manager = RunManager(store=state_store)
 active_websockets: dict = {}  # {task_id: [websocket, websocket, ...]}
-
-
-def on_research_event(task_id: str, event: dict):
-    """Callback called by orchestrator when an event occurs."""
-    if task_id in active_websockets:
-        for ws in active_websockets[task_id]:
-            try:
-                # This will be called from async context, so we schedule it
-                asyncio.create_task(_send_ws_update(ws, event))
-            except Exception as e:
-                print(f"Error sending to websocket: {e}")
-
-
-async def _send_ws_update(ws: WebSocket, event: dict):
-    """Send update to websocket (async helper)."""
-    try:
-        await ws.send_json(event)
-    except Exception as e:
-        print(f"WebSocket send error: {e}")
 
 
 @asynccontextmanager
@@ -76,24 +58,12 @@ async def root():
 @app.post("/api/research")
 async def start_research(request: ResearchRequest):
     """Start a new research task."""
-    task_id = state_manager.create_session(request.topic, request.max_turns)
-
-    # Run research in background
-    async def run_research():
-        try:
-            orchestrator = ResearchOrchestrator(
-                lm_client, 
-                state_manager, 
-                callback=on_research_event
-            )
-            result = orchestrator.research(task_id, request.topic, request.max_turns)
-            return result
-        except Exception as e:
-            state_manager.mark_error(task_id, str(e))
-            raise
-
-    # Start research as a background task
-    asyncio.create_task(run_research())
+    task_id = state_store.create_session(request.topic, request.max_turns)
+    try:
+        run_manager.start_run(task_id)
+    except Exception as e:
+        state_store.fail_session(task_id, str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to start worker: {e}") from e
 
     return {
         "task_id": task_id,
@@ -105,7 +75,7 @@ async def start_research(request: ResearchRequest):
 @app.get("/api/status/{task_id}")
 async def get_status(task_id: str):
     """Get the current status of a research task."""
-    session = state_manager.get_session(task_id)
+    session = state_store.get_session(task_id)
     if not session:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -113,45 +83,85 @@ async def get_status(task_id: str):
         task_id=session["task_id"],
         status=session["status"],
         current_turn=session["current_turn"],
-        history=session["history"]
+        max_turns=session.get("max_turns", 8),
+        history=state_store.get_history(task_id),
+        final_answer=session.get("final_answer"),
+        error=session.get("error"),
     )
 
 
 @app.get("/api/history")
 async def get_history(query: str = None):
     """List research history."""
-    sessions = db_manager.get_all_sessions(query)
+    sessions = state_store.list_sessions(query)
     return [
         {
-            "task_id": row[0],
-            "topic": row[1],
-            "status": row[2],
-            "created_at": row[3]
-        } for row in sessions
+            "task_id": row["task_id"],
+            "topic": row["topic"],
+            "status": row["status"],
+            "created_at": row["created_at"],
+        }
+        for row in sessions
     ]
 
 
 @app.get("/api/history/{task_id}")
 async def get_session_details(task_id: str):
     """Get full details of a past session."""
-    session, history = db_manager.get_session_details(task_id)
+    session = state_store.get_session(task_id)
+    history = state_store.get_history(task_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
     return {
-        "task_id": session[0],
-        "topic": session[1],
-        "status": session[2],
-        "history": [{"turn": h[0], "action": h[1], "content": h[2], "timestamp": h[3]} for h in history],
-        "final_answer": session[6]
+        "task_id": session["task_id"],
+        "topic": session["topic"],
+        "status": session["status"],
+        "history": history,
+        "final_answer": session.get("final_answer"),
     }
 
 
 @app.delete("/api/history/{task_id}")
 async def delete_session(task_id: str):
     """Delete a session."""
-    db_manager.delete_session(task_id)
+    state_store.delete_session(task_id)
     return {"message": "Session deleted"}
+
+
+@app.post("/api/research/{task_id}/resume", response_model=LifecycleResponse)
+async def resume_research(task_id: str):
+    """Resume a failed/paused research task."""
+    session = state_store.get_session(task_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Task not found")
+    try:
+        run_manager.resume_run(task_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return LifecycleResponse(task_id=task_id, status="running", message="resume requested")
+
+
+@app.post("/api/research/{task_id}/pause", response_model=LifecycleResponse)
+async def pause_research(task_id: str):
+    """Pause a running research task."""
+    session = state_store.get_session(task_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Task not found")
+    run_manager.pause_run(task_id)
+    return LifecycleResponse(task_id=task_id, status="paused", message="pause requested")
+
+
+@app.post("/api/research/{task_id}/cancel", response_model=LifecycleResponse)
+async def cancel_research(task_id: str):
+    """Cancel a running research task."""
+    session = state_store.get_session(task_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Task not found")
+    run_manager.cancel_run(task_id)
+    return LifecycleResponse(task_id=task_id, status="canceled", message="cancel requested")
 
 
 @app.post("/api/models/load")
@@ -205,7 +215,7 @@ async def websocket_research(websocket: WebSocket, task_id: str):
     await websocket.accept()
 
     # Check if task exists
-    session = state_manager.get_session(task_id)
+    session = state_store.get_session(task_id)
     if not session:
         await websocket.send_json({"error": "Task not found"})
         await websocket.close()
@@ -224,10 +234,20 @@ async def websocket_research(websocket: WebSocket, task_id: str):
             "current_turn": session["current_turn"]
         })
 
-        # Keep connection alive
+        # Keep connection alive and stream status snapshots.
         while True:
-            data = await websocket.receive_text()
-            # Clients can send heartbeat or commands if needed
+            await asyncio.sleep(1)
+            latest = state_store.get_session(task_id)
+            if not latest:
+                await websocket.send_json({"type": "error", "message": "Task deleted"})
+                return
+            await websocket.send_json({
+                "type": "status",
+                "status": latest["status"],
+                "current_turn": latest["current_turn"],
+            })
+            if latest["status"] in {"completed", "failed", "canceled", "paused"}:
+                return
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:

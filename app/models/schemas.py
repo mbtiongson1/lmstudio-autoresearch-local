@@ -11,7 +11,16 @@ class ResearchStatus(BaseModel):
     task_id: str
     status: str  # "started", "running", "completed", "error"
     current_turn: int
+    max_turns: int = 8
     history: List[dict]
+    final_answer: Optional[str] = None
+    error: Optional[str] = None
+
+
+class LifecycleResponse(BaseModel):
+    task_id: str
+    status: str
+    message: str
 
 
 class ActionEvent(BaseModel):

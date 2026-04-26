@@ -5,11 +5,13 @@ A real-time research agent that leverages a local LM Studio model to autonomousl
 ## Features
 
 - 🤖 **Autonomous Research**: 8-turn iterative research loop with SEARCH → THINK → ANSWER actions.
-- 🛠️ **MCP Tool Support**: Native integration with LM Studio 0.4.0+ V1 API for Model Context Protocol tools (e.g., Hugging Face model search).
+- 🧭 **API-Only Control Plane**: FastAPI is the only run control surface (start/status/resume/pause/cancel).
+- ⚙️ **Out-of-Process Worker**: `train.py` executes research loops in a separate process for isolation and recoverability.
+- 💾 **Durable Resume State**: SQLite-backed checkpoints, process metadata, and run events for resuming failed runs.
 - 🌐 **Web Search Integration**: DuckDuckGo API for live research data.
-- 📡 **Real-time Monitoring**: WebSocket updates showing research progress turn-by-turn.
+- 📡 **Real-time Monitoring**: WebSocket status updates during run execution.
 - 🎨 **Modern Web UI**: Responsive frontend with live progress tracking.
-- 🧪 **Fully Tested**: 33 comprehensive unit tests covering all components, including V1 API and MCP logic.
+- 🧪 **Fully Tested**: 51 unit tests across API, worker runtime, run manager, state store, and LM Studio integration.
 - ⚡ **Fast Setup**: `uv` for rapid Python dependency management.
 
 ## Quick Start
@@ -57,16 +59,26 @@ Frontend (HTML/CSS/JS)
     ↓ HTTP/WebSocket
 FastAPI Server (app/main.py)
     ↓
-Research Orchestrator (app/orchestrator.py)
-    ├─ LM Studio Client (services/lm_studio_client.py) [V1 API + MCP]
-    ├─ Search Service (services/search_service.py)
-    └─ State Manager (services/state_manager.py)
+Run Manager (app/services/run_manager.py)
+    ├─ Worker Runtime (train.py)
+    │   ├─ LM Studio Client (app/services/lm_studio_client.py) [V1 API + MCP]
+    │   └─ Search Service (app/services/search_service.py)
+    └─ State Store (app/services/state_store.py) [SQLite sessions/checkpoints/processes/events]
 ```
 
 ### Key Components
 
 - **LM Studio Client (V1 API)**: Uses the native `/api/v1/chat` endpoint to support reasoning, tool calls, and MCP integrations.
-- **Orchestrator**: Manages the research loop, injecting MCP tool configurations (like Hugging Face) into every model turn.
+- **Run Manager**: Spawns and controls the isolated `train.py` worker process.
+- **State Store**: Durable session/history/checkpoint/process persistence and resume state.
+
+## Run Control Endpoints
+
+- `POST /api/research` - start a new run
+- `GET /api/status/{task_id}` - current durable run status
+- `POST /api/research/{task_id}/resume` - resume a failed/paused run
+- `POST /api/research/{task_id}/pause` - pause a run
+- `POST /api/research/{task_id}/cancel` - cancel a run
 
 ## Configuration
 
