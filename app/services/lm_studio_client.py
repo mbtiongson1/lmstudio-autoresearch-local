@@ -74,7 +74,7 @@ class LMStudioClient:
             print(f"DEBUG: V1 API Error: {str(e)}")
             raise
 
-    def chat_v1_stream(self, input_text: str, system_prompt: str = None, context_length: int = 2048):
+    def chat_v1_stream(self, input_text: str, system_prompt: str = None, integrations: list = None, context_length: int = 2048):
         """Call the native LM Studio V1 API with streaming enabled."""
         base = self.v1_base_url.rstrip("/")
         if not base.endswith("/api/v1"):
@@ -91,7 +91,8 @@ class LMStudioClient:
             "model": self.model,
             "input": input_text,
             "context_length": context_length,
-            "stream": True
+            "stream": True,
+            "integrations": integrations or []
         }
         
         if system_prompt:
