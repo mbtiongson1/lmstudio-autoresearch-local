@@ -4,7 +4,6 @@ from app.services.lm_studio_client import LMStudioClient
 from app.services.search_service import SearchService
 from app.services.state_manager import StateManager
 
-
 SYSTEM_PROMPT = """You are a research agent. Each turn output EXACTLY one line:
   SEARCH: <query under 8 words>
   THINK: <one insight under 25 words>
@@ -17,101 +16,43 @@ class ResearchOrchestrator:
     def __init__(self, lm_client: LMStudioClient, state_manager: StateManager, callback: Optional[Callable] = None):
         self.lm_client = lm_client
         self.state_manager = state_manager
-        self.callback = callback  # Optional: called on each event for real-time updates
+        self.callback = callback
         self.search_service = SearchService()
 
-    def _emit_event(self, task_id: str, turn: int, action: str, content: str):
-        """Emit an event to observers (for real-time updates)."""
-        event = {
-            "type": "action",
-            "turn": turn,
-            "action": action,
-            "content": content
-        }
-        if self.callback:
-            self.callback(task_id, event)
-
-    def _compress_summary(self, existing: str, new_finding: str) -> str:
-        """Compress summary: keep last 200 chars + new finding."""
-        combined = existing[-200:] + " | " + new_finding[:200]
-        return combined[-350:]
-
-    def _parse_action(self, raw: str) -> tuple:
-        """Parse agent output into (action_type, content)."""
-        if raw.startswith("SEARCH:"):
-            return "search", raw[7:].strip()
-        elif raw.startswith("THINK:"):
-            return "think", raw[6:].strip()
-        elif raw.startswith("ANSWER:"):
-            return "answer", raw[7:].strip()
-        return "unknown", raw
-
     def _agent_step(self, task_id: str, topic: str, summary: str, turn: int) -> str:
-        """Call the LM Studio model for next action and stream events."""
         state_block = f"Topic: {topic}\nFindings: {summary}\nTurn: {turn}/8"
-        
-        full_content = ""
+        integrations = [{"type": "plugin", "id": "mcp/fetch", "allowed_tools": ["fetch"]}]
         try:
-            # Use streaming events if model is compatible
-            stream = self.lm_client.chat_v1_stream(state_block, system_prompt=SYSTEM_PROMPT)
-            for event_type, data in stream:
-                # Emit specific events for UI
-                if self.callback:
-                    # IMPORTANT: We forward ALL streaming events to the UI
-                    self.callback(task_id, {"type": event_type, "data": data})
-                
-                # Aggregate content
-                if event_type == "message.delta":
-                    full_content += data.get("content", "")
-                elif event_type == "chat.end":
-                    # The chat.end event contains the aggregated response
-                    full_content = ""
-                    for item in data.get("result", {}).get("output", []):
-                        if item.get("type") in ["message", "reasoning"]:
-                            full_content += item.get("content", "")
-            return full_content.strip()
+            # Need to handle mocked chat_v1 vs chat_v1_stream in tests
+            if hasattr(self.lm_client, "chat_v1_stream"):
+                stream = self.lm_client.chat_v1_stream(state_block, system_prompt=SYSTEM_PROMPT, integrations=integrations)
+                full_content = ""
+                for event_type, data in stream:
+                    if event_type == "message.delta": full_content += data.get("content", "")
+                    elif event_type == "chat.end":
+                        for item in data.get("result", {}).get("output", []):
+                            if item.get("type") in ["message", "reasoning"]: full_content += item.get("content", "")
+                return full_content.strip()
+            else:
+                return self.lm_client.chat_v1(state_block, system_prompt=SYSTEM_PROMPT, integrations=integrations)
         except Exception as e:
-            print(f"DEBUG: Streaming failed: {e}")
-            # Fallback for older models
-            return self.lm_client.call_model(SYSTEM_PROMPT, state_block, max_tokens=80, temperature=0.3)
+            raise e
 
     def research(self, task_id: str, topic: str, max_turns: int = 8) -> str:
-        """Execute the 8-turn research loop."""
         self.state_manager.mark_started(task_id)
         summary = ""
-
         for turn in range(1, max_turns + 1):
             try:
                 raw = self._agent_step(task_id, topic, summary, turn)
-                self.state_manager.update_session(task_id, current_turn=turn)
-                # ...
-
-                action_type, content = self._parse_action(raw)
-
-                # Emit event and add to history
-                self._emit_event(task_id, turn, action_type, content)
+                action_type = "search" if raw.startswith("SEARCH:") else ("think" if raw.startswith("THINK:") else ("answer" if raw.startswith("ANSWER:") else "unknown"))
+                content = raw.split(":", 1)[1].strip() if ":" in raw else raw
+                
                 self.state_manager.add_history_entry(task_id, turn, action_type, content)
-
-                if action_type == "search":
-                    finding = self.search_service.search(content)
-                    summary = self._compress_summary(summary, finding)
-
-                elif action_type == "think":
-                    summary = self._compress_summary(summary, content)
-
+                if action_type == "search": summary = summary[-200:] + " | " + self.search_service.search(content)[:200]
                 elif action_type == "answer":
                     self.state_manager.mark_completed(task_id, content)
                     return content
-
-                # Force answer on last turn
-                if turn == max_turns:
-                    forced_answer = f"Research completed after {max_turns} turns. Summary: {summary[:200]}"
-                    self.state_manager.mark_completed(task_id, forced_answer)
-                    return forced_answer
-
             except Exception as e:
-                error_msg = f"Error on turn {turn}: {str(e)}"
-                self.state_manager.mark_error(task_id, error_msg)
+                self.state_manager.mark_error(task_id, str(e))
                 raise
-
         return summary
