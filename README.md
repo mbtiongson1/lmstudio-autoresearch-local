@@ -1,5 +1,7 @@
 # LM Studio AutoResearch Agent
 
+[![Powered by Gaia](https://gaia.tiongson.co/badges/powered-by-gaia.svg)](https://gaia.tiongson.co/)
+
 A real-time research agent that leverages a local LM Studio model to autonomously conduct multi-turn research by searching the web and synthesizing findings.
 
 ## Features
